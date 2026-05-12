@@ -108,7 +108,18 @@ export default function App() {
       setTickets(p => [t, ...p]);
       setForm({ title: "", email: "", category: CATEGORIES[0], priority: "Medium", description: "" });
       setShowNew(false);
-      notify(`✅ ${t.id} created! Confirmation sent to ${t.email}`);
+      fetch("/api/send-confirmation", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    to: t.email,
+    ticketId: t.id,
+    title: t.title,
+    priority: t.priority,
+    category: t.category,
+  }),
+});
+notify(`✅ ${t.id} created! Confirmation sent to ${t.email}`);
     }
     setSaving(false);
   }
