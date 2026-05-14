@@ -141,7 +141,36 @@ export default function App() {
 
   function notify(msg, color) { setToast({ msg, color }); setTimeout(() => setToast(null), 3500); }
 
-  useEffect(() => { fetchTickets(); }, []);
+  useEffect(() => {
+  // Load tickets on startup
+  fetchTickets();
+
+  // Listen for ANY changes to the tickets table in real time
+  const channel = supabase
+    .channel("tickets-live")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "tickets" },
+      (payload) => {
+        // New ticket added
+        if (payload.eventType === "INSERT") {
+          setTickets(prev => [payload.new, ...prev]);
+        }
+        // Ticket updated (status, agent, comment)
+        if (payload.eventType === "UPDATE") {
+          setTickets(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
+        }
+        // Ticket deleted
+        if (payload.eventType === "DELETE") {
+          setTickets(prev => prev.filter(t => t.id !== payload.old.id));
+        }
+      }
+    )
+    .subscribe();
+
+  // Cleanup when app closes
+  return () => supabase.removeChannel(channel);
+}, []);
 
   async function fetchTickets() {
     setLoading(true);
